@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.AI;
+using System;
 
 public class Robot : MonoBehaviour
 {
@@ -15,6 +16,7 @@ public class Robot : MonoBehaviour
     private bool _isWaiting = true;
     private bool _hasOre = false;
 
+    public event Action<Robot> RemoveMe;
     public bool IsWaiting => _isWaiting;
 
     private void Awake()
@@ -36,6 +38,7 @@ public class Robot : MonoBehaviour
 
     public void SetBuilder(Vector3 position, GameObject basePrefab)
     {
+        RemoveMe?.Invoke(this);
         _basePrefab = basePrefab;
         _agent.SetDestination(position);
 

@@ -3,17 +3,17 @@ using System;
 using System.Collections.Generic;
 
 [RequireComponent(typeof(Flag), typeof(RobotSpawner), typeof(VeinSpawner))]
+[RequireComponent(typeof(BaseSpawner))]
 public class Base : MonoBehaviour
 {
     [SerializeField] private GameObject _basePrefab;
     private RobotSpawner _robotSpawner;
     private VeinSpawner _veinSpawner;
-    private Flag _flag;
+    private BaseSpawner _baseSpawner;
     private List<Robot> _robots;
     private List<Vein> _veins;
     private int _radiuseReturn = 5;
     private int _countResurceToSpawn = 3;
-    private int _countResurceToBuild = 5;
 
     private Dictionary<ResourceType, int> _oreCounts = new Dictionary<ResourceType, int>();
     private int _maxOreCount = 30;
@@ -21,6 +21,7 @@ public class Base : MonoBehaviour
     private Vector3 _newBasePosition = Vector3.zero;
 
     public event Action<Dictionary<ResourceType, int>, int> ResourceReceived;
+    public int RobotCount => _robots.Count;
 
     private void Awake()
     {
@@ -32,53 +33,26 @@ public class Base : MonoBehaviour
             _oreCounts[type] = 0;
         }
 
-        _flag = GetComponent<Flag>();
         _robotSpawner = GetComponent<RobotSpawner>();
         _veinSpawner = GetComponent<VeinSpawner>();
-        _flag.NotPlan();
+        _baseSpawner = GetComponent<BaseSpawner>();
     }
 
     private void OnEnable()
     {
         _robotSpawner.Spawned += AddRobot;
         _veinSpawner.Spawned += AddVein;
-        _flag.Request += AddBase;
     }
 
     private void OnDisable()
     {
         _robotSpawner.Spawned -= AddRobot;
         _veinSpawner.Spawned -= AddVein;
-        _flag.Request -= AddBase;
     }
 
     private void Update()
     {
-        if (_newBasePosition != Vector3.zero && _oreCounts[GetLeastNeededOre()] >= _countResurceToBuild)
-        {
-            SentToBuild();
-        }
-        else
-        {
-            ScanLocations();
-        }
-    }
-
-    private void SentToBuild()
-    {
-        ResourceType resource = GetLeastNeededOre();
-
-        _oreCounts[resource] -= _countResurceToBuild;
-        ResourceReceived?.Invoke(_oreCounts, _maxOreCount);
-
-        List<Robot> waitingRobots = GetWaitingRobots();
-
-        if (waitingRobots.Count == 0) return;
-
-        waitingRobots[0].SetBuilder(_newBasePosition, _basePrefab);
-        _robots.Remove(waitingRobots[0]);
-        _newBasePosition = Vector3.zero;
-        _flag.NotPlan();
+        ScanLocations();
     }
 
     private void ScanLocations()
@@ -107,23 +81,8 @@ public class Base : MonoBehaviour
             if (targetVein == null) break;
 
             _targetedVeins.Add(targetVein);
-            robot.TakeTarget(targetVein, GetRandomCirclePosition(_radiuseReturn), this);
+            robot.TakeTarget(targetVein, PositionUtils.GetRandomCirclePosition(transform.position ,_radiuseReturn), this);
         }
-    }
-
-    private List<Robot> GetWaitingRobots()
-    {
-        List<Robot> waiting = new List<Robot>();
-
-        foreach (Robot robot in _robots)
-        {
-            if (robot != null && robot.IsWaiting)
-            {
-                waiting.Add(robot);
-            }
-        }
-
-        return waiting;
     }
 
     private ResourceType? GetMostNeededOre()
@@ -134,23 +93,6 @@ public class Base : MonoBehaviour
         foreach (var pair in _oreCounts)
         {
             if (pair.Value < _maxOreCount && pair.Value < lowestCount)
-            {
-                lowestCount = pair.Value;
-                bestType = pair.Key;
-            }
-        }
-
-        return bestType;
-    }
-
-    private ResourceType GetLeastNeededOre()
-    {
-        ResourceType bestType = ResourceType.None;
-        int lowestCount = int.MinValue;
-
-        foreach (var pair in _oreCounts)
-        {
-            if (pair.Value > _maxOreCount && pair.Value > lowestCount)
             {
                 lowestCount = pair.Value;
                 bestType = pair.Key;
@@ -188,32 +130,30 @@ public class Base : MonoBehaviour
         return null;
     }
 
-    private void AddBase(Vector3 position)
-    {
-        if (_robots.Count > 1)
-        {
-            _newBasePosition = position;
-        }
-        else
-        {
-            _flag.NotPlan();
-        }
-    }
-
-    public void AddRobot(Robot robot)
-    {
-        _robots.Add(robot);
-    }
-
     private void AddVein(Vein vein)
     {
         _veins.Add(vein);
+    }
+
+    private void RemoveRobot(Robot robot)
+    {
+        if (_robots.Contains(robot)) 
+        {
+            robot.RemoveMe -= RemoveRobot;
+            _robots.Remove(robot);
+        }
     }
 
     public void RemoveVein(Vein vein)
     {
         if (_veins.Contains(vein)) _veins.Remove(vein);
         if (_targetedVeins.Contains(vein)) _targetedVeins.Remove(vein);
+    }
+
+    public void AddRobot(Robot robot)
+    {
+        _robots.Add(robot);
+        robot.RemoveMe += RemoveRobot;
     }
 
     public void ReleaseVein(Vein vein)
@@ -228,7 +168,7 @@ public class Base : MonoBehaviour
         ResourceType type = ore.ResourceType;
         _oreCounts[type] = Mathf.Min(_oreCounts[type] + ore.GetOreCount(), _maxOreCount);
 
-        if (_oreCounts[type] >= _countResurceToSpawn && _newBasePosition == Vector3.zero)
+        if (_oreCounts[type] >= _countResurceToSpawn && _baseSpawner.GetNewBasePosition() == false)
         {
             _oreCounts[type] -= _countResurceToSpawn;
             _robotSpawner.SpawnRobot();
@@ -238,12 +178,37 @@ public class Base : MonoBehaviour
         Destroy(ore.gameObject);
     }
 
-    private Vector3 GetRandomCirclePosition(float radius)
+    public ResourceType? GetOreTypeAvailableForBuild()
     {
-        float theta = UnityEngine.Random.Range(0f, Mathf.PI * 2f);
-        float x = radius * Mathf.Cos(theta);
-        float z = radius * Mathf.Sin(theta);
+        foreach (var pair in _oreCounts)
+        {
+            if (pair.Value >= _baseSpawner.CountOreToBuild)
+            {
+                return pair.Key;
+            }
+        }
+        
+        return null;
+    }
 
-        return transform.position + new Vector3(x, 0f, z);
+    public List<Robot> GetWaitingRobots()
+    {
+        List<Robot> waiting = new List<Robot>();
+
+        foreach (Robot robot in _robots)
+        {
+            if (robot != null && robot.IsWaiting)
+            {
+                waiting.Add(robot);
+            }
+        }
+
+        return waiting;
+    }
+
+    public void SpendResource(ResourceType type, int count)
+    {
+        _oreCounts[type] -= count;
+        ResourceReceived?.Invoke(_oreCounts, _maxOreCount);
     }
 }

@@ -7,5 +7,6 @@ public class StartGame : MonoBehaviour
     private void Start()
     {
         _robotSpawner.SpawnRobot();
+        _robotSpawner.SpawnRobot();
     } 
 }
