@@ -8,14 +8,11 @@ public class FlagObject : MonoBehaviour
     [SerializeField] private InputSystem _inputSystem;
     [SerializeField] private GameObject _flagPrefab;
 
-    [SerializeField] private float _offsetY = 2.5f;
+    [SerializeField] private float _offsetY = 3.5f;
     [SerializeField] private float _borderX = 500f;
     [SerializeField] private float _borderZ = 500f;
 
-    private bool _isCanSetFlag = false;
     private bool _isWaiting = false;
-
-    public event Action<Vector3> FlagSetted;
 
     private void Awake()
     {
@@ -26,37 +23,35 @@ public class FlagObject : MonoBehaviour
 
     private void OnEnable()
     {
-        _raycaster.ReycastConsidered += SetPosition;
         _flag.StartWorking += Enable;
         _flag.StopWorking += Disable;
-        _inputSystem.LeftMouseClicked += SetFlag;
     }
 
     private void OnDisable()
     {
-        _raycaster.ReycastConsidered -= SetPosition;
         _flag.StartWorking -= Enable;
         _flag.StopWorking -= Disable;
-        _inputSystem.LeftMouseClicked -= SetFlag;
     }
 
-    private void SetFlag()
+    private void Update()
     {
-        if (_isCanSetFlag && _isWaiting == false)
+        if (_flagPrefab.activeSelf)
         {
-            if (_flagPrefab.transform.position[0] > _borderX || _flagPrefab.transform.position[2] > _borderZ || _flagPrefab.transform.position[0] < -_borderX || _flagPrefab.transform.position[2] < -_borderZ) 
+            if (_raycaster.TryGetHit(out RaycastHit hit))
             {
-                return;
+                SetPosition(hit.point);
             }
-            
-            FlagSetted?.Invoke(_flagPrefab.transform.position);
-            _isWaiting = true;
+        }
+    }
 
-        }
-        else
+    public void SetFlag()
+    {
+        if (_flagPrefab.transform.position[0] > _borderX || _flagPrefab.transform.position[2] > _borderZ || _flagPrefab.transform.position[0] < -_borderX || _flagPrefab.transform.position[2] < -_borderZ) 
         {
-            _isCanSetFlag = true;
+            return;
         }
+            
+        _isWaiting = true;
     }
 
     private void SetPosition(Vector3 position)
@@ -69,12 +64,12 @@ public class FlagObject : MonoBehaviour
     private void Enable()
     {
         _flagPrefab.SetActive(true);
+        _isWaiting = false; 
     }
 
     private void Disable()
     {
         _flagPrefab.SetActive(false);
         _isWaiting = false;
-        _isCanSetFlag = false;
     }
 }

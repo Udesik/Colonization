@@ -7,6 +7,10 @@ public class Flag : MonoBehaviour
     [SerializeField] private float _waitingTime = 5f;
     [SerializeField] private InputSystem _inputSystem;
     [SerializeField] private FlagObject _flagObject;
+    [SerializeField] private Reycaster _reycaster;
+
+    private Base _myBase;
+    private bool _isPlacingMode = false;
 
     public event Action<Vector3> Request;
     public event Action StartWorking;
@@ -14,23 +18,47 @@ public class Flag : MonoBehaviour
 
     private void OnEnable()
     {
+        _inputSystem.LeftMouseClicked += CheckMousePosition;
         _inputSystem.RightMouseClicked += Stop;
-        _flagObject.FlagSetted += SetRequest;
     }
 
     private void OnDisable()
     {
+        _inputSystem.LeftMouseClicked -= CheckMousePosition;
         _inputSystem.RightMouseClicked -= Stop;
-        _flagObject.FlagSetted -= SetRequest;
     }
 
-    private void OnMouseDown()
+    private void Awake()
     {
-        StartWorking?.Invoke();
+        _myBase = GetComponent<Base>();
+    }
+
+    private void CheckMousePosition()
+    {
+        if (_reycaster.TryGetHit(out RaycastHit hit))
+        {
+            // 1. Клик по зданиям
+            if (hit.collider.gameObject.layer == LayerMask.NameToLayer("Buildings"))
+            {
+                Base clickedBase = hit.collider.gameObject.GetComponent<Base>();
+
+                if (clickedBase == _myBase)
+                {
+                    _isPlacingMode = true;
+                    StartWorking?.Invoke(); 
+                }
+            }
+            else if (_isPlacingMode)
+            {
+                _flagObject.SetFlag();
+                SetRequest(hit.point);
+            }
+        }
     }
 
     private void SetRequest(Vector3 position)
     {
+        Debug.Log("Set request");
         StartCoroutine(WaitForRequest(position));
     }
 
@@ -43,7 +71,7 @@ public class Flag : MonoBehaviour
 
     public void Stop()
     {
-        Request?.Invoke(Vector3.zero);
+        _isPlacingMode = false;
         StopWorking?.Invoke();
     }
 }

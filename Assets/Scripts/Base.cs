@@ -1,12 +1,14 @@
 using UnityEngine;
 using System;
 using System.Collections.Generic;
+using System.Collections;
 
 [RequireComponent(typeof(Flag), typeof(RobotSpawner), typeof(VeinSpawner))]
 [RequireComponent(typeof(BaseSpawner))]
 public class Base : MonoBehaviour
 {
     [SerializeField] private GameObject _basePrefab;
+    [SerializeField] private float _waitTime = 1f;
     private RobotSpawner _robotSpawner;
     private VeinSpawner _veinSpawner;
     private BaseSpawner _baseSpawner;
@@ -14,6 +16,7 @@ public class Base : MonoBehaviour
     private List<Vein> _veins;
     private int _radiuseReturn = 5;
     private int _countResurceToSpawn = 3;
+    private bool _isScanning = true;
 
     private Dictionary<ResourceType, int> _oreCounts = new Dictionary<ResourceType, int>();
     private int _maxOreCount = 30;
@@ -50,9 +53,9 @@ public class Base : MonoBehaviour
         _veinSpawner.Spawned -= AddVein;
     }
 
-    private void Update()
+    private void Start()
     {
-        ScanLocations();
+        StartCoroutine(WaitForScan(_waitTime));
     }
 
     private void ScanLocations()
@@ -210,5 +213,15 @@ public class Base : MonoBehaviour
     {
         _oreCounts[type] -= count;
         ResourceReceived?.Invoke(_oreCounts, _maxOreCount);
+    }
+
+    private IEnumerator WaitForScan(float waitTime)
+    {
+        while (_isScanning)
+        {
+            yield return new WaitForSeconds(waitTime);
+
+            ScanLocations();
+        }
     }
 }

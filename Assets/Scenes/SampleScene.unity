@@ -1670,7 +1670,7 @@ GameObject:
   - component: {fileID: 1044415972}
   - component: {fileID: 1044415971}
   - component: {fileID: 1044415970}
-  m_Layer: 7
+  m_Layer: 2
   m_Name: Flag
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -2393,6 +2393,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Base
   _basePrefab: {fileID: 1464783627}
+  _waitTime: 1
 --- !u!114 &1464783637
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2408,6 +2409,7 @@ MonoBehaviour:
   _waitingTime: 5
   _inputSystem: {fileID: 1464783654}
   _flagObject: {fileID: 1464783650}
+  _reycaster: {fileID: 1464783649}
 --- !u!65 &1464783638
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -2497,7 +2499,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4097ca18302bdd328abe0599ec975b3e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Reycaster
-  _flag: {fileID: 1464783637}
 --- !u!114 &1464783650
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2529,7 +2530,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5411be451dc443210b2183103d79db4e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::InputSystem
-  _flag: {fileID: 1464783637}
 --- !u!114 &1464783655
 MonoBehaviour:
   m_ObjectHideFlags: 0

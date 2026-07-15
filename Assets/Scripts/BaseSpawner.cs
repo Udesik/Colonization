@@ -1,5 +1,6 @@
 using UnityEngine;
 using System;
+using System.Collections.Generic;
 
 public class BaseSpawner : MonoBehaviour
 {
@@ -36,6 +37,7 @@ public class BaseSpawner : MonoBehaviour
 
             if (availableOre != null)
             {
+                Debug.Log("Try send builder");
                 TrySendBuilder(availableOre.Value);
             }
         }
@@ -55,7 +57,12 @@ public class BaseSpawner : MonoBehaviour
 
     private void TrySendBuilder(ResourceType resource)
     {
-        Robot robot = _base.GetWaitingRobots()[0];
+        List<Robot> robots = _base.GetWaitingRobots();
+        Debug.Log($"Count waiting robots: {robots.Count}");
+
+        if (robots.Count == 0) return;
+
+        Robot robot = robots[0];
 
         if (robot != null)
         {

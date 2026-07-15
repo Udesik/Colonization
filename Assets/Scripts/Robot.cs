@@ -38,12 +38,12 @@ public class Robot : MonoBehaviour
 
     public void SetBuilder(Vector3 position, GameObject basePrefab)
     {
+        _isWaiting = false;
+        _hasOre = true;
+        
         RemoveMe?.Invoke(this);
         _basePrefab = basePrefab;
         _agent.SetDestination(position);
-
-        _isWaiting = false;
-        _hasOre = true;
     }
 
     private void Update()
